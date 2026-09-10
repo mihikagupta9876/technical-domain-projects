@@ -37,7 +37,7 @@ Checkpoint is an attendance system that uses QR codes and geolocation verificati
 
 ## Deployment
 
-Live Demo: To be added
+Live Demo: https://mihikagupta9876.github.io/technical-domain-projects/
 
 ## Screenshots
 
