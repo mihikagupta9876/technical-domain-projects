@@ -1,0 +1,6 @@
+{
+  "name":"attendx-client","private":true,"version":"1.0.0","type":"module",
+  "scripts":{"dev":"vite","build":"vite build","preview":"vite preview"},
+  "dependencies":{"@vitejs/plugin-react":"^4.3.4","axios":"^1.7.9","html5-qrcode":"^2.3.8","lucide-react":"^0.468.0","qrcode.react":"^4.2.0","react":"^18.3.1","react-dom":"^18.3.1","react-router-dom":"^7.1.1","recharts":"^2.15.0","socket.io-client":"^4.8.1"},
+  "devDependencies":{"vite":"^6.0.5"}
+}
