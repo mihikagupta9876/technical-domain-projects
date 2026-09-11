@@ -13,6 +13,12 @@ dotenv.config();
 
 const app = express();
 const http = createServer(app);
+const io = new Server(http, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
 
 app.get('/api/events', auth, (req, res) => {
   let rows = req.user.role === 'organizer'
