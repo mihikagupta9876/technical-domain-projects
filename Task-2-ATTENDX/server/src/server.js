@@ -22,7 +22,44 @@ app.get('/api/health',(req,res)=>res.json({ok:true,service:'ATTENDX API'}));
 app.post('/api/auth/login',(req,res)=>{const {email,password}=req.body;const u=db.prepare('SELECT * FROM users WHERE email=?').get(email);if(!u||!bcrypt.compareSync(password,u.password))return res.status(401).json({message:'Invalid email or password'});res.json({token:sign(u),user:{id:u.id,name:u.name,email:u.email,role:u.role}})});
 app.post('/api/auth/register',(req,res)=>{const {name,email,password,role='attendee'}=req.body;if(!name||!email||!password)return res.status(400).json({message:'Name, email and password are required'});try{const id=randomUUID();db.prepare('INSERT INTO users VALUES (?,?,?,?,?,?,?)').run(id,name,email,bcrypt.hashSync(password,10),role,new Date().toISOString());const u=db.prepare('SELECT * FROM users WHERE id=?').get(id);res.json({token:sign(u),user:{id,name,email,role}})}catch(e){res.status(409).json({message:'Email already registered'})}});
 
-app.get('/api/events',auth,(req,res)=>{let rows=req.user.role==='organizer'?db.prepare('SELECT * FROM events WHERE organizer_id=? ORDER BY start_time DESC').all(req.user.id):db.prepare('SELECT * FROM events ORDER BY start_time DESC').all();rows=rows.map(e=>({...e,total:db.prepare('SELECT COUNT(*) c FROM attendance WHERE event_id=? AND status="present"').get(e.id).c}));res.json(rows)});
+app.get('/api/events', auth, (req, res) => {
+  let rows = req.user.role === 'organizer'
+    ? db.prepare('SELECT * FROM events WHERE organizer_id=? ORDER BY start_time DESC').all(req.user.id)
+    : db.prepare('SELECT * FROM events ORDER BY start_time DESC').all();
+
+  const now = Date.now();
+  console.log("CURRENT TIME:", new Date().toString());
+console.log("EVENT TIMES:", rows.map(e => ({
+  name: e.name,
+  start_time: e.start_time,
+  end_time: e.end_time,
+  start: new Date(e.start_time).toString(),
+  end: new Date(e.end_time).toString()
+})));
+
+  rows = rows.map(e => {
+    const start = new Date(e.start_time).getTime();
+    const end = new Date(e.end_time).getTime();
+
+    let status = 'upcoming';
+
+    if (now >= start && now <= end) {
+      status = 'live';
+    } else if (now > end) {
+      status = 'ended';
+    }
+
+    return {
+      ...e,
+      status,
+      total: db
+        .prepare('SELECT COUNT(*) c FROM attendance WHERE event_id=? AND status="present"')
+        .get(e.id).c
+    };
+  });
+
+  res.json(rows);
+});
 app.post('/api/events',auth,(req,res)=>{if(req.user.role!=='organizer')return res.status(403).json({message:'Organizer only'});const {name,description,venue,latitude,longitude,radius=100,start_time,end_time}=req.body;if(!name||latitude==null||longitude==null||!start_time||!end_time)return res.status(400).json({message:'Missing event fields'});const id=randomUUID();db.prepare('INSERT INTO events VALUES (?,?,?,?,?,?,?,?,?,?,?,?)').run(id,req.user.id,name,description||'',venue||'',latitude,longitude,radius,start_time,end_time,'upcoming',new Date().toISOString());res.json(db.prepare('SELECT * FROM events WHERE id=?').get(id))});
 app.patch('/api/events/:id/status',auth,(req,res)=>{const e=db.prepare('SELECT * FROM events WHERE id=?').get(req.params.id);if(!e||e.organizer_id!==req.user.id)return res.status(404).json({message:'Event not found'});db.prepare('UPDATE events SET status=? WHERE id=?').run(req.body.status,e.id);res.json({ok:true})});
 app.get('/api/events/:id',(req,res)=>{const e=db.prepare('SELECT * FROM events WHERE id=?').get(req.params.id);if(!e)return res.status(404).json({message:'Event not found'});const stats=db.prepare(`SELECT SUM(status='present') present,SUM(status='rejected') rejected,COUNT(*) total FROM attendance WHERE event_id=?`).get(e.id);const recent=db.prepare(`SELECT a.*,u.name,u.email FROM attendance a JOIN users u ON u.id=a.user_id WHERE a.event_id=? ORDER BY a.marked_at DESC LIMIT 12`).all(e.id);res.json({...e,stats:{present:stats.present||0,rejected:stats.rejected||0},recent})});

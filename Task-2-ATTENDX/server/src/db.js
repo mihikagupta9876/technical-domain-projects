@@ -16,8 +16,7 @@ const count = db.prepare('SELECT COUNT(*) c FROM users').get().c;
 if (!count) {
   const now = new Date().toISOString();
   const pass = bcrypt.hashSync('admin123',10);
-  db.prepare('INSERT INTO users VALUES (?,?,?,?,?,?,?)').run('org-demo','Mihika Gupta','organizer@attendx.local',pass,'organizer',now);
-  const p2 = bcrypt.hashSync('student123',10);
+  db.prepare('INSERT INTO users VALUES (?,?,?,?,?,?)').run('org-demo','Mihika Gupta','organizer@attendx.local',pass,'organizer',now); const p2 = bcrypt.hashSync('student123',10);
   db.prepare('INSERT INTO users VALUES (?,?,?,?,?,?,?)').run('student-demo','Demo Student','student@attendx.local',p2,'attendee',now);
   const id = randomUUID();
   const start = new Date(Date.now()-60*60*1000).toISOString(); const end = new Date(Date.now()+2*60*60*1000).toISOString();
